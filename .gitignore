@@ -1,0 +1,12 @@
+__pycache__
+*.swp
+*.exe
+*.build
+*.dist
+tests/temp_*
+*.egg-info
+build
+dist
+simplescn.build
+setup.cfg
+parameters_overwrite.py

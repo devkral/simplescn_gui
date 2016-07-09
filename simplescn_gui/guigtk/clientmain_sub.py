@@ -12,7 +12,7 @@ try:
     import markdown
     gi.require_version('WebKit2', '4.0')
     from gi.repository import WebKit2
-except Exception: #ImportError: #require_version can fail too; TODO: find right exception
+except Exception: #ImportError: #require_version can fail too;
     pass
 
 from simplescn import isself, logcheck

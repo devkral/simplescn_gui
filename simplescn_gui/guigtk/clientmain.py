@@ -16,13 +16,13 @@ from gi.repository import Gtk, Gdk, GLib, Gio
 
 import simplescn
 from simplescn import client, logcheck
-from simplescn.__main__ import running_instances
+#from simplescn.__main__ import running_instances
 
-from simplescn.guigtk.clientmain_sub import cmd_stuff, debug_stuff, configuration_stuff, help_stuff
-from simplescn.guigtk.clientmain_managehash import hashmanagement
-from simplescn.guigtk.clientdialogs import gtkclient_pw, gtkclient_notify, parentlist
-from simplescn.guigtk.clientnode import gtkclient_node
-from simplescn.guigtk import set_parent_template, implementedrefs
+from simplescn_gui.guigtk.clientmain_sub import cmd_stuff, debug_stuff, configuration_stuff, help_stuff
+from simplescn_gui.guigtk.clientmain_managehash import hashmanagement
+from simplescn_gui.guigtk.clientdialogs import gtkclient_pw, gtkclient_notify, parentlist
+from simplescn_gui._guiguigtk.clientnode import gtkclient_node
+from simplescn_gui.guigtk import set_parent_template, implementedrefs
 
 from simplescn import default_sslcont, sharedir, isself, check_hash, scnparse_url, AddressEmptyFail, generate_error
 #debug_mode
@@ -935,7 +935,7 @@ gtkclient_instance = None
 def _init_method_gtkclient(confm, pluginm):
     global gtkclient_instance
     gtkclient_instance = gtkclient_init(confm, pluginm)
-    running_instances.append(gtkclient_instance)
+    #running_instances.append(gtkclient_instance)
     if not confm.getb("noplugins"):
         pluginm.resources["access"] = gtkclient_instance.links["client"].access_safe
         pluginm.resources["plugin"] = gtkclient_instance.links["client"].use_plugin
