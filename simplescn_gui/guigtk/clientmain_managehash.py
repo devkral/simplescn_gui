@@ -8,9 +8,9 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
-from simplescn import scnparse_url, logcheck
-from simplescn.guigtk.clientnode import gtkclient_node
-from simplescn.guigtk import implementedrefs
+from simplescn.tools import scnparse_url, logcheck
+from simplescn_gui.guigtk.clientnode import gtkclient_node
+from simplescn_gui.guigtk import implementedrefs
 
 class hashmanagement(object):
     managehashdia = None

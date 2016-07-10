@@ -14,18 +14,20 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, Gio
 
-from simplescn import client, logcheck
 #from simplescn.__main__ import running_instances
 
 from simplescn_gui.guigtk.clientmain_sub import cmd_stuff, debug_stuff, configuration_stuff, help_stuff
 from simplescn_gui.guigtk.clientmain_managehash import hashmanagement
 from simplescn_gui.guigtk.clientdialogs import gtkclient_pw, gtkclient_notify, parentlist
-from simplescn_gui._guiguigtk.clientnode import gtkclient_node
+from simplescn_gui.guigtk.clientnode import gtkclient_node
 from simplescn_gui.guigtk import set_parent_template, implementedrefs
+from simplescn_gui import sharedir
+from simplescn_gui import __main__
 
-from simplescn import AddressEmptyFail
+from simplescn import AddressEmptyError
 from simplescn.config import isself
-from simplescn.tools import default_sslcont, check_hash, scnparse_url
+from simplescn.tools import default_sslcont, scnparse_url, logcheck
+from simplescn.tools.checks import check_hash
 #debug_mode
 messageid = 0
 
@@ -575,7 +577,7 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         serverurl = self.builder.get_object("servercomboentry").get_text()
         try:
             serverurl = "{}-{}".format(*scnparse_url(serverurl))
-        except AddressEmptyFail:
+        except AddressEmptyError:
             logging.debug("Address Empty")
             return
         if not self.do_requestdo("prioty_direct", address=serverurl)[0]:
@@ -870,7 +872,7 @@ def open_gtk_node(_address, forcehash=None, page=0, requester=""):
         forcehash: shall a certification hash be enforced
         page: name or number of page
         requester: requesting plugin """
-    gtkclient_node(gtkclient_instance.links, _address, forcehash=forcehash, page=page)
+    __main__.guiclient_node(__main__.guiclient_node.links, _address, forcehash=forcehash, page=page)
     
 def open_gtk_pwcall_plugin(msg, requester):
     """ plugin: open a password dialog
@@ -890,14 +892,16 @@ def open_gtk_notify_plugin(msg, requester):
     else:
         return None
 
-class gtkclient_init(client.client_init):
+class gtkclient_init(object):
+    links = None
     def __init__(self, confm, pluginm):
+        self.links = {}
         logging.root.setLevel(confm.get("loglevel"))
         logging.debug("start gtkclient")
-        simplescn.pwcallmethodinst = gtkclient_pw
-        simplescn_gui.notifyinst = gtkclient_notify
+        self.links["config"] = confm
+        #simplescn.pwcallmethodinst = gtkclient_pw
+        #simplescn_gui.notifyinst = gtkclient_notify
 
-        client.client_init.__init__(self, confm, pluginm)
         self.links["gtkclient"] = gtkclient_main(self.links)
 
         logging.getLogger().addHandler(self.links["gtkclient"])
@@ -917,15 +921,14 @@ class gtkclient_init(client.client_init):
 
 # for open_gtk_node and debug?
 def _init_method_gtkclient(confm, pluginm):
-    global gtkclient_instance
-    gtkclient_instance = gtkclient_init(confm, pluginm)
+    __main__.guiclient_instance = gtkclient_init(confm, pluginm)
     #running_instances.append(gtkclient_instance)
-    if not confm.getb("noplugins"):
-        pluginm.resources["access"] = gtkclient_instance.links["client"].access_safe
-        pluginm.resources["plugin"] = gtkclient_instance.links["client"].use_plugin
+    if False:# not confm.getb("noplugins"):
+        #pluginm.resources["access"] = __main__.guiclient_instance.links["client"].access_safe
+        #pluginm.resources["plugin"] = __main__.guiclient_instance.links["client"].use_plugin
         pluginm.resources["open_node"] = open_gtk_node
         pluginm.resources["open_pwrequest"] = open_gtk_pwcall_plugin
         pluginm.resources["open_notify"] = open_gtk_notify_plugin
         pluginm.init_plugins()
-    gtkclient_instance.enter_gtkmainloop()
+    __main__.guiclient_instance.enter_gtkmainloop()
     sys.exit(0)

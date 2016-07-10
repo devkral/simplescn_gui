@@ -8,7 +8,7 @@ import gi
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk
 
-from simplescn.guigtk import clientdialogs
+from simplescn_gui.guigtk import clientdialogs
 
 # refs which already do something; warning additional offline reference, which cannot be saved
 implementedrefs = ["surl", "url", "name"]

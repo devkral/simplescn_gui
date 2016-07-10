@@ -13,6 +13,10 @@ import threading
 import logging
 import json
 
+from simplescn.tools.checks import check_conftype, check_name, check_hash, check_security, check_typename, check_reference, check_reference_type
+from simplescn.tools import loglevel_converter
+from simplescn.config import isself, default_configdir, max_typelength
+
 
 if not hasattr(importlib.util, "module_from_spec"):
     import types
@@ -23,9 +27,10 @@ except ImportError:
     pass
 
 
-from simplescn import pluginstartfile, pluginconfig, check_conftype, check_name, check_hash, check_security, check_typename, check_reference, check_reference_type
-from simplescn import confdb_ending, isself, default_configdir, loglevel_converter, max_typelength
 
+pluginconfig = ""
+pluginstartfile = ""
+confdb_ending = ".confdb"
 
 def verify_config(obj):
     if not isinstance(obj, dict):

@@ -12,7 +12,10 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib
 
 from simplescn_gui.guigtk import set_parent_template, activate_shielded, toggle_shielded, open_hashes
-from simplescn_gui import sharedir, isself, check_name, security_states, logcheck
+from simplescn_gui import sharedir
+from simplescn.config import isself, security_states
+from simplescn.tools import logcheck
+from simplescn.tools.checks import check_name
 
 class _gtkclient_node(Gtk.Builder, set_parent_template):
     isregistered = False

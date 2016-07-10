@@ -15,7 +15,8 @@ try:
 except Exception: #ImportError: #require_version can fail too;
     pass
 
-from simplescn.config import isself, logcheck
+from simplescn.config import isself
+from simplescn.tools import logcheck
 
 class configuration_stuff(object):
     win = None
