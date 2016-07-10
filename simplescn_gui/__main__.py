@@ -10,18 +10,21 @@ import os
 import logging
 import threading
 import signal
-import json
+#import json
+
+from simplescn._common import scnparse_args, loglevel_converter
+
+confdb_ending = ".confdb"
 
 # don't load different module
 if __name__ == "__main__":
     ownpath = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.dirname(ownpath))
 
-from simplescn import config
-from simplescn._common import scnparse_args, loglevel_converter
 
 guiclient_instance = None
-
+default_loglevel = "DEBUG"
+logformat = '%(levelname)s::%(filename)s:%(lineno)d::%(funcName)s::%(message)s'
 
 _is_init_already = False
 def _init_scn():
@@ -29,7 +32,7 @@ def _init_scn():
     global _is_init_already
     if not _is_init_already and threading.current_thread() == threading.main_thread():
         _is_init_already = True
-        logging.basicConfig(level=loglevel_converter(config.default_loglevel), format=config.logformat)
+        logging.basicConfig(level=loglevel_converter(default_loglevel), format=logformat)
         signal.signal(signal.SIGINT, _signal_handler)
 
 def _signal_handler(_signal, frame):
@@ -47,30 +50,33 @@ def client(argv=sys.argv[1:]):
         logging.error(exc)
         return
 
+default_client_config = \
+{
+    "backlog": [str(200), int, "length of backlog"],
+    "config": [config.default_configdir, parsepath, "<path>: path to config dir"]
+
+}
 def client_gtk(argv=sys.argv[1:]):
     """ gtk gui """
     _init_scn()
     from simplescn_gui.guigtk.clientmain import _init_method_gtkclient
-    from simplescn_gui.common import pluginmanager, configmanager
+    from simplescn_gui.common import configmanager #pluginmanager
     from simplescn_gui.client import client_paramhelp, overwrite_client_args, default_client_args
 
-    default_client_args2 = default_client_args.copy()
-    del default_client_args2["nocmd"]
-    default_client_args["backlog"] = [str(200), int, "length of backlog"]
-    pluginpathes = [os.path.join(sharedir, "plugins")]
-    pluginpathes += scnparse_args(argv, client_paramhelp, default_client_args2, overwrite_client_args)
+    #pluginpathes = [os.path.join(sharedir, "plugins")]
+    overkwargs = scnparse_args(argv, client_paramhelp, default_client_args)
     configpath = overwrite_client_args["config"][0]
     configpath = os.path.expanduser(configpath)
     if configpath[-1] == os.sep:
         configpath = configpath[:-1]
     overwrite_client_args["config"][0] = configpath
-    pluginpathes.insert(1, os.path.join(configpath, "plugins"))
-    configpath_plugins = os.path.join(configpath, "config", "plugins")
+    #pluginpathes.insert(1, os.path.join(configpath, "plugins"))
+    #configpath_plugins = os.path.join(configpath, "config", "plugins")
     os.makedirs(os.path.join(configpath, "config"), 0o750, True)
-    os.makedirs(configpath_plugins, 0o750, True)
+    #os.makedirs(configpath_plugins, 0o750, True)
     # uses different configuration file than rawclient
-    #confm = configmanager(os.path.join(configpath, "config", "clientgtkgui{}".format(confdb_ending)))
-    #confm.update(default_client_args, overwrite_client_args)
+    confm = configmanager(os.path.join(configpath, "config", "clientgtkgui{}".format(confdb_ending)))
+    confm.update(default_client_args, overkwargs)
     #if not confm.getb("noplugins"):
     #    pluginm = pluginmanager(pluginpathes, configpath_plugins, "client")
     #    if confm.getb("webgui"):
@@ -78,7 +84,7 @@ def client_gtk(argv=sys.argv[1:]):
     #    pluginm.interfaces += ["cmd", "gtk"]
     #else:
     #    pluginm = None
-    #_init_method_gtkclient(confm, pluginm)
+    _init_method_gtkclient(confm, None) #pluginm
 
 
 
@@ -126,5 +132,17 @@ def client_gtk(argv=sys.argv[1:]):
 #    else:
 #        print(config.set(overwrite_plugin_config_args["key"][0], overwrite_plugin_config_args["value"][0]))
 
+def _init_method_main(argv=sys.argv[1:]):
+    """ starter method """
+    if len(argv) > 0:
+        toexe = globals().get(argv[0].strip("_"), None)
+        if callable(toexe):
+            toexe(argv[1:])
+        else:
+            print("Not available", file=sys.stderr)
+            print("Available: client", file=sys.stderr)
+    else:
+        print("Available: client", file=sys.stderr)
+
 if __name__ == "__main__":
-    pass
+    _init_method_main()

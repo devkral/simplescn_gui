@@ -14,7 +14,6 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, Gio
 
-import simplescn
 from simplescn import client, logcheck
 #from simplescn.__main__ import running_instances
 
@@ -24,7 +23,9 @@ from simplescn_gui.guigtk.clientdialogs import gtkclient_pw, gtkclient_notify, p
 from simplescn_gui._guiguigtk.clientnode import gtkclient_node
 from simplescn_gui.guigtk import set_parent_template, implementedrefs
 
-from simplescn import default_sslcont, sharedir, isself, check_hash, scnparse_url, AddressEmptyFail, generate_error
+from simplescn import AddressEmptyFail
+from simplescn.config import isself
+from simplescn.tools import default_sslcont, check_hash, scnparse_url
 #debug_mode
 messageid = 0
 
@@ -210,21 +211,8 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         """ func: execute requests """
         # use_localclient is True if client was set successfully
         # can force remote or local
-        if (self.use_localclient is True or forcelocal is True) and not forceremote:
-            resp = self.links["client"].access_main(action, **obdict)
-        else:
-            clienturl = self.builder.get_object("clienturl").get_text().strip().rstrip()
-            clienthash = self.builder.get_object("clienthash").get_text().strip().rstrip()
-            if clienthash == "":
-                clienthash = None
-            obdict["pwcall_method"] = self.links["client"].pw_auth
-            try:
-                resp = self.links["client"].do_request(clienturl, "/client/{}".format(action), body=obdict, forcehash=clienthash, sendclientcert=True, forceport=True)
-            except Exception as exc:
-                #if debug_mode:
-                #    logging.error(exc)
-                return False, generate_error(exc), isself, self.links["client"].cert_hash
-        return resp
+        #resp = s(action, obdict)
+        
 
     def pushint(self):
         """ func: delete messsage after 5 seconds """
@@ -907,16 +895,13 @@ class gtkclient_init(client.client_init):
         logging.root.setLevel(confm.get("loglevel"))
         logging.debug("start gtkclient")
         simplescn.pwcallmethodinst = gtkclient_pw
-        simplescn.notifyinst = gtkclient_notify
+        simplescn_gui.notifyinst = gtkclient_notify
 
         client.client_init.__init__(self, confm, pluginm)
         self.links["gtkclient"] = gtkclient_main(self.links)
 
         logging.getLogger().addHandler(self.links["gtkclient"])
         parentlist.insert(0, self.links["gtkclient"].win)
-        if not confm.getb("noserver"):
-            logging.debug("start client server")
-            self.serve_forever_nonblock()
     def enter_gtkmainloop(self):
         logging.debug("enter mainloop")
         # needed? https://developer.gnome.org/glib/stable/glib-Deprecated-Thread-APIs.html
@@ -931,7 +916,6 @@ class gtkclient_init(client.client_init):
         self.links["gtkclient"].app.quit()
 
 # for open_gtk_node and debug?
-gtkclient_instance = None
 def _init_method_gtkclient(confm, pluginm):
     global gtkclient_instance
     gtkclient_instance = gtkclient_init(confm, pluginm)
