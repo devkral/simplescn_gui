@@ -14,7 +14,8 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, Gio
 
-#from simplescn.__main__ import running_instances
+from simplescn.tools import generate_error
+from simplescn.scnrequest import requester
 
 from simplescn_gui.guigtk.clientmain_sub import cmd_stuff, debug_stuff, configuration_stuff, help_stuff
 from simplescn_gui.guigtk.clientmain_managehash import hashmanagement
@@ -25,6 +26,7 @@ from simplescn_gui import sharedir
 from simplescn_gui import __main__
 
 from simplescn import AddressEmptyError
+#, AuthNeeded
 from simplescn.config import isself
 from simplescn.tools import default_sslcont, scnparse_url, logcheck
 from simplescn.tools.checks import check_hash
@@ -60,9 +62,11 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
     cert_hash = None
     #start_url_hash=(None,None)
     _old_serverurl = ""
+    _requester = None
 
     def __init__(self, _links):
         self.links = _links
+        self._requester = requester(pwhandler=gtkclient_pw)
         #self.setFormatter(logging.Formatter('%(levelname)s::%(filename)s:%(lineno)d::%(funcName)s::%(message)s'))
         #self.app = Gtk.Application.new("apps.simplescn", Gio.ApplicationFlags.NON_UNIQUE)
         self.app = Gtk.Application.new(None, Gio.ApplicationFlags. FLAGS_NONE)
@@ -209,12 +213,17 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
                 if _hash[0] != "default":
                     self.update_serverlist_refid(_hash[4])
 
-    def do_requestdo(self, action, forcelocal=False, forceremote=False, **obdict):
+    def do_requestdo(self, action, sendclientcert=None, **obdict):
         """ func: execute requests """
+        #={}
+        try:
+            resp = self._requester.do_request_simple(self.remoteclient_url, "/client/{}".format(action), obdict, {}, forcehash=self.remoteclient_hash, sendclientcert=sendclientcert)
+        except Exception as exc:
+            resp = generate_error(exc)
         # use_localclient is True if client was set successfully
         # can force remote or local
         #resp = s(action, obdict)
-        
+        return resp
 
     def pushint(self):
         """ func: delete messsage after 5 seconds """
@@ -238,12 +247,8 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
     blcounter = 0
     def _emit(self, record):
         """ func: intern emit """
-        backlogret = self.do_requestdo("get_config", forcelocal=True, key="backlog")
-        if not backlogret[0]:
-            print(backlogret[1], file=sys.stderr)
-            bllength = 1
-        else:
-            bllength = max(0, backlogret[1].get("value"))
+        #TODO: check if config is correct
+        bllength = self.links["config"].get("backlog")
         if self.blcounter == bllength and self.blcounter > 0:
             self.backlogdebug.remove(self.backlogdebug.get_iter_first())
         elif self.blcounter > bllength:
@@ -523,7 +528,7 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
             self.close_clientdia()
             return
         if _hash == "":
-            ret = self.do_requestdo("gethash", forcelocal=True, address=_url)
+            ret = self.do_requestdo("gethash", address=_url)
             if not logcheck(ret, logging.INFO):
                 return
             clhash.set_text(ret[1]["hash"])
@@ -535,21 +540,21 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
                 return
         # deactivate old
         if not self.use_localclient and self.remoteclient_url != _url:
-            ret = self.do_requestdo("delredirect", forceremote=True)
+            ret = self.do_requestdo("delredirect")
             if not ret[0]:
                 logging.debug("delredirect failed")
             self.links["trusted_certhash"] = ""
         self.remoteclient_url = clurl.get_text()
         self.remoteclient_hash = _hash
         # get local port
-        _showret = self.do_requestdo("show", forcelocal=True)
+        _showret = self.do_requestdo("show")
         if not _showret[0]:
             logging.error("Error: redirect not possible; servercomponent of client not active")
             self.close_clientdia()
             return
         # activate new if it is remote
         if not ulocal.get_active():
-            ret = self.do_requestdo("addredirect", forceremote=True, port=_showret[1].get("port"))
+            ret = self.do_requestdo("addredirect", port=_showret[1].get("port"))
             if not logcheck(ret, logging.ERROR):
                 return
             self.links["trusted_certhash"] = _hash

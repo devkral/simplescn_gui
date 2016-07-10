@@ -334,7 +334,7 @@ class help_stuff(object):
         self.aboutwin.connect('delete-event', self.close_about)
         self.helpwin = self.builder.get_object("helpwin")
         self.helpwin.set_transient_for(self.win)
-        _help = self.do_requestdo("help", forcelocal=True)
+        _help = self.do_requestdo("help")
         if "markdown" in globals() and "WebKit2" in globals():
             view = WebKit2.WebView(editable=False, hexpand=True, vexpand=True)
             wksettings = view.get_settings()
