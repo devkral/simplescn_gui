@@ -41,7 +41,7 @@ class configuration_stuff(object):
         self.preflist = self.builder.get_object("preflist")
         self.defaultvall = self.builder.get_object("defaultvall")
         self.permanentl = self.builder.get_object("permanentl")
-        self.loadplugins()
+        #self.loadplugins()
 
         self.pluginlistview = self.builder.get_object("pluginlistview")
         col0 = Gtk.TreeViewColumn("Plugins", Gtk.CellRendererText(), text=0)
@@ -112,7 +112,6 @@ class configuration_stuff(object):
         usemaint = self.builder.get_object("usemainconf")
         #useplugt = self.builder.get_object("usepluginconf")
         #prefmainscroll = self.builder.get_object("prefmainscroll")
-
         if usemaint.get_active():
             self.load_mainconfig()
         else:
@@ -121,12 +120,8 @@ class configuration_stuff(object):
     def apply_config(self, *args):
         haderror = False
         for key, val in self._changed_mainconf.items():
-            if not logcheck(self.do_requestdo("set_config", key=key, value=val), logging.ERROR):
+            if not self.links["config"].set(key=key, value=val):
                 haderror = True
-        for plugin, kv in self._changed_pluginconf.items():
-            for key, val in kv.items():
-                if not logcheck(self.do_requestdo("set_pluginconfig", plugin=plugin, key=key, value=val), logging.ERROR):
-                    haderror = True
         # if no error is reported reload client config
         if not haderror:
             self.reset_config()
@@ -135,15 +130,13 @@ class configuration_stuff(object):
         #self.set_tainted(False)
 
     def load_mainconfig(self, *args):
-        prefpluginscroll = self.builder.get_object("prefpluginscroll")
-        prefpluginscroll.hide()
         cleanpluginsb = self.builder.get_object("cleanpluginsb")
         cleanpluginsb.hide()
         self.preflist.clear()
-        _preflist = self.do_requestdo("list_config")
+        _preflist = self.links["config"].list()
         if not logcheck(_preflist, logging.ERROR):
             return
-        for _key, _val, _converter, _default, _doc, ispermanent in _preflist[1]["items"]:
+        for _key, _val, _converter, _default, _doc, ispermanent in _preflist:
             if _key != "state":
                 self.preflist.append((_key, _val, ispermanent, _default))
 
@@ -197,15 +190,15 @@ class configuration_stuff(object):
         logcheck(self.do_requestdo("clean_pluginconfig"), logging.ERROR) #plugin=_plugin needed?
 
     def toggle_configuration(self, *args):
-        usemaint = self.builder.get_object("usemainconf")
+        #usemaint = self.builder.get_object("usemainconf")
         #useplugt = self.builder.get_object("usepluginconf")
         #prefmainscroll = self.builder.get_object("prefmainscroll")
         # show pluginlist with checkbutton for active when usepluginconf is active
         # elsewise show just the configurationwindow
-        if usemaint.get_active():
-            self.load_mainconfig()
-        else:
-            self.load_pluginconfig()
+        #if usemaint.get_active():
+        self.load_mainconfig()
+        #else:
+        #    self.load_pluginconfig()
 
     def close_configurationwin(self, *args):
         self.configurationwin.hide()
@@ -310,7 +303,8 @@ class debug_stuff(object):
     def set_loglevel(self, *args):
         _levelname = self.builder.get_object("filterlevel-entry").get_text()
         _levelno = logging._nameToLevel[_levelname]
-        logcheck(self.do_requestdo("changeloglevel", loglevel=_levelno))
+        if self.remoteclient_url != "":
+            logcheck(self.do_requestdo("changeloglevel", loglevel=_levelno))
 
     def debug_show(self, *args):
         self.debugwin.show()
@@ -327,6 +321,7 @@ class help_stuff(object):
     helpwin = None
     builder = None
     win = None
+    helpview = None
 
     def init(self):
         self.aboutwin = self.builder.get_object("aboutwin")
@@ -334,17 +329,13 @@ class help_stuff(object):
         self.aboutwin.connect('delete-event', self.close_about)
         self.helpwin = self.builder.get_object("helpwin")
         self.helpwin.set_transient_for(self.win)
-        _help = self.do_requestdo("help")
         if "markdown" in globals() and "WebKit2" in globals():
-            view = WebKit2.WebView(editable=False, hexpand=True, vexpand=True)
-            wksettings = view.get_settings()
+            self.helpview = WebKit2.WebView(editable=False, hexpand=True, vexpand=True)
+            wksettings = self.helpview.get_settings()
             wksettings.set_property('enable-plugins', False)
-            view.load_html((markdown.markdown(_help[1]["help"])))
-            self.builder.get_object("helpscrollwin").add(view)
         else:
-            textview = Gtk.TextView(editable=False, hexpand=True, vexpand=True)
-            textview.get_buffer().set_text(_help[1]["help"])
-            self.builder.get_object("helpscrollwin").add(textview)
+            self.helpview = Gtk.TextView(editable=False, hexpand=True, vexpand=True)
+        self.builder.get_object("helpscrollwin").add(self.helpview)
         self.builder.get_object("helpscrollwin").show_all()
         self.helpwin.connect('delete-event', self.close_help)
 
@@ -361,6 +352,11 @@ class help_stuff(object):
 
     def help_show(self, *args):
         """ present help window """
+        _help = self.do_requestdo("help")
+        if isinstance(self.helpview, WebKit2.WebView):
+            self.helpview.load_html((markdown.markdown(_help[1]["help"])))
+        else:
+            self.helpview.get_buffer().set_text(_help[1]["help"])
         self.helpwin.show()
         self.helpwin.present()
         self.helpwin.set_accept_focus(True)

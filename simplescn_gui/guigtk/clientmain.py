@@ -14,6 +14,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, Gio
 
+from simplescn import AddressError
 from simplescn.tools import generate_error
 from simplescn.scnrequest import requester
 
@@ -55,9 +56,8 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
 
     clientwin = None
 
-    remoteclient_url = ""
-    remoteclient_hash = ""
-    use_localclient = True
+    remoteclient_url = None
+    remoteclient_hash = None
 
     cert_hash = None
     #start_url_hash=(None,None)
@@ -66,6 +66,8 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
 
     def __init__(self, _links):
         self.links = _links
+        self.remoteclient_url = self.links["config"].get("remoteclient_url")
+        self.remoteclient_hash = self.links["config"].get("remoteclient_hash")
         self._requester = requester(pwhandler=gtkclient_pw)
         #self.setFormatter(logging.Formatter('%(levelname)s::%(filename)s:%(lineno)d::%(funcName)s::%(message)s'))
         #self.app = Gtk.Application.new("apps.simplescn", Gio.ApplicationFlags.NON_UNIQUE)
@@ -77,6 +79,8 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         self.builder.add_from_file(os.path.join(sharedir, "guigtk", "clientmain_sub.ui"))
         self.builder.connect_signals(self)
         self.win = self.builder.get_object("mainwin")
+        self.clientunix = self.builder.get_object("useunix")
+        self.clientunix.set_active(self.links["config"].get("useunix"))
         self.app.register()
         self.app.add_window(self.win)
         debug_stuff.init(self)
@@ -92,6 +96,10 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         recentview = self.builder.get_object("recentview")
         localview = self.builder.get_object("localview")
 
+        if not check_hash(self.remoteclient_hash):
+            ret = self.do_requestdo("show", overwriteaddress=self.remoteclient_url)
+            if ret[0]:
+                self.remoteclient_hash = ret[3]
 
         help_stuff.init(self)
         configuration_stuff.init(self)
@@ -142,6 +150,27 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         self.win.connect('delete-event', self.close)
         self.init_connects()
         self.update_storage()
+
+    def do_requestdo(self, action, overwriteaddress=None, **obdict):
+        """ func: execute requests """
+        #={}
+        try:
+            if overwriteaddress:
+                resp = self._requester.do_request(overwriteaddress, "/client/{}".format(action), obdict, {}, keepalive=False, ownhash=self.remoteclient_hash)
+            else:
+                resp = self._requester.do_request(self.remoteclient_url, "/client/{}".format(action), obdict, {}, forcehash=self.remoteclient_hash, pwhandler=gtkclient_pw, keepalive=False, ownhash=self.remoteclient_hash, use_unix=self.clientunix.get_active())
+            if resp[0] is not None:
+                resp[0].close()
+            ret = resp[1], resp[2], resp[3][0], resp[3][1]
+        except Exception as exc:
+            if isinstance(exc, AddressError):
+                ret = False, generate_error(exc, False), isself, self.remoteclient_hash
+            else:
+                ret = False, generate_error(exc, True), isself, self.remoteclient_hash
+        # use_localclient is True if client was set successfully
+        # can force remote or local
+        #resp = s(action, obdict)
+        return ret
 
     def update_storage(self):
         """ func: update local storage """
@@ -213,17 +242,6 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
                 if _hash[0] != "default":
                     self.update_serverlist_refid(_hash[4])
 
-    def do_requestdo(self, action, sendclientcert=None, **obdict):
-        """ func: execute requests """
-        #={}
-        try:
-            resp = self._requester.do_request_simple(self.remoteclient_url, "/client/{}".format(action), obdict, {}, forcehash=self.remoteclient_hash, sendclientcert=sendclientcert)
-        except Exception as exc:
-            resp = generate_error(exc)
-        # use_localclient is True if client was set successfully
-        # can force remote or local
-        #resp = s(action, obdict)
-        return resp
 
     def pushint(self):
         """ func: delete messsage after 5 seconds """
@@ -247,7 +265,6 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
     blcounter = 0
     def _emit(self, record):
         """ func: intern emit """
-        #TODO: check if config is correct
         bllength = self.links["config"].get("backlog")
         if self.blcounter == bllength and self.blcounter > 0:
             self.backlogdebug.remove(self.backlogdebug.get_iter_first())
@@ -284,18 +301,18 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
             _veri.set_text("")
             return None
 
-        _hash = self.do_requestdo("ask", address=serverurl)
+        _hash = self.do_requestdo("check_direct", address=serverurl)
         if not _hash[0]:
             _veri.set_text("")
             return None
 
-        if _hash[1].get("localname") is None:
+        if _hash[2][0] is None:
             _veri.set_text("Unknown server")
-        elif _hash[1].get("localname") == isself:
+        elif _hash[2][0] is isself:
             _veri.set_text("This client")
         else:
-            _veri.set_text("Verified as:\n{}\n ({})".format(_hash[1].get("localname"), _hash[1].get("security")))
-        return _hash[1]
+            _veri.set_text("Verified as:\n{}\n ({})".format(_hash[2][0][0], _hash[2][0][1]))
+        return _hash[2]
 
     def veristate_server(self, *args):
         """ use servercomboentry widget, call _verifyserver """
@@ -318,19 +335,19 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         cnode = self.builder.get_object("curnode")
         cnodeorigin = self.builder.get_object("nodeorigin")
         opennodeb = self.builder.get_object("opennodeb")
-        _ask = self.do_requestdo("ask", address=_clientaddress)
+        _ask = self.do_requestdo("check_direct", address=_clientaddress)
         if not _ask[0]:
             cnodeorigin.set_text("")
             cnode.set_text("invalid")
             opennodeb.set_sensitive(False)
             self.curnode = None
-        elif _ask[1].get("localname") is None:
+        elif _ask[2][0] is None:
             cnodeorigin.set_text("remote:")
             cnode.set_text(_name)
             opennodeb.show()
             opennodeb.set_sensitive(True)
             self.curnode = (None, _clientaddress, _name, _hash, _serveraddress)
-        elif _ask[1].get("localname") == isself:
+        elif _ask[2][0] is isself:
             cnodeorigin.set_text("")
             cnode.set_text("This client")
             opennodeb.show()
@@ -338,10 +355,10 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
             self.curnode = (isself, _clientaddress, _name, _hash, _serveraddress)
         else:
             cnodeorigin.set_text("verified:")
-            cnode.set_text(_ask[1].get("localname"))
+            cnode.set_text(_ask[2][0][0])
             opennodeb.show()
             opennodeb.set_sensitive(True)
-            self.curnode = (_ask[1].get("localname"), _clientaddress, _name, _hash, _serveraddress)
+            self.curnode = (_ask[2][0][0], _clientaddress, _name, _hash, _serveraddress)
 
     def open_server(self, *args):
         """ func: use servercomboentry to open node """
@@ -355,7 +372,7 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         #    name = "Own server"
         #else:
         #    #name = askinfo.get("localname")
-        gtkclient_node(self.links, "{}-{}".format(*scnparse_url(serverurl)), forcehash=askinfo.get("hash"), page="server")
+        gtkclient_node(self.links, "{}-{}".format(*scnparse_url(serverurl)), forcehash=askinfo[1], page="server")
 
     ### node actions ###
     def addnodehash_intern(self, _name, _hash, _type="unknown", refstoadd=()):
@@ -488,10 +505,10 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         serverurl = "{}-{}".format(*scnparse_url(serverurl))
         localview = self.builder.get_object("localview")
         temp = self._verifyserver(serverurl)
-        if temp is None:
+        if temp[0] is None:
             logging.debug("Something failed")
             return
-        _hash = temp.get("hash")
+        _hash = temp[1]
 
         _sel = localview.get_selection().get_selected()
         if _sel[1] is None:
@@ -514,67 +531,42 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         """ func: switch between controlling remote client and own client """
         self.builder.get_object("clienturl").set_text(self.remoteclient_url)
         self.builder.get_object("clienthash").set_text(self.remoteclient_hash)
-        self.builder.get_object("uselocal").set_active(self.use_localclient)
         self.clientwin.show()
         self.clientwin.grab_focus()
 
     def client_confirm(self, *args):
         clurl = self.builder.get_object("clienturl")
         clhash = self.builder.get_object("clienthash")
-        ulocal = self.builder.get_object("uselocal")
         _hash = clhash.get_text().strip(" ").rstrip(" ")
         _url = clurl.get_text().strip().rstrip()
         if _url == "":
             self.close_clientdia()
             return
         if _hash == "":
-            ret = self.do_requestdo("gethash", address=_url)
+            ret = self.do_requestdo("show", overwriteaddress=_url)
             if not logcheck(ret, logging.INFO):
                 return
-            clhash.set_text(ret[1]["hash"])
+            clhash.set_text(ret[3])
+            _hash = clhash.get_text().strip(" ").rstrip(" ")
+            if not self.clientunix.get_active():
+                return
+        if _url == "":
             return
-        if not ulocal.get_active():
-            if _url == "":
-                return
-            if not check_hash(_hash):
-                return
+        if not check_hash(_hash):
+            return
         # deactivate old
-        if not self.use_localclient and self.remoteclient_url != _url:
-            ret = self.do_requestdo("delredirect")
-            if not ret[0]:
-                logging.debug("delredirect failed")
+        if self.remoteclient_url != _url:
             self.links["trusted_certhash"] = ""
         self.remoteclient_url = clurl.get_text()
         self.remoteclient_hash = _hash
         # get local port
-        _showret = self.do_requestdo("show")
+        _showret = self.do_requestdo("show", forcehash=_hash)
         if not _showret[0]:
             logging.error("Error: redirect not possible; servercomponent of client not active")
             self.close_clientdia()
             return
-        # activate new if it is remote
-        if not ulocal.get_active():
-            ret = self.do_requestdo("addredirect", port=_showret[1].get("port"))
-            if not logcheck(ret, logging.ERROR):
-                return
-            self.links["trusted_certhash"] = _hash
-            self.use_localclient = False
-            self.close_clientdia()
-        else:
-            self.links["trusted_certhash"] = ""
-            self.use_localclient = True
-            self.close_clientdia()
-
-    def client_localtoggle(self, *args):
-        toggle = self.builder.get_object("uselocal")
-        clurl = self.builder.get_object("clienturl")
-        clhash = self.builder.get_object("clienthash")
-        if toggle.get_active():
-            clurl.set_sensitive(False)
-            clhash.set_sensitive(False)
-        else:
-            clurl.set_sensitive(True)
-            clhash.set_sensitive(True)
+        self.links["trusted_certhash"] = _hash
+        self.close_clientdia()
 
     ### misc actions ###
 
@@ -904,6 +896,7 @@ class gtkclient_init(object):
         logging.root.setLevel(confm.get("loglevel"))
         logging.debug("start gtkclient")
         self.links["config"] = confm
+        self.links["config_root"] = confm.get("config")
         #simplescn.pwcallmethodinst = gtkclient_pw
         #simplescn_gui.notifyinst = gtkclient_notify
 

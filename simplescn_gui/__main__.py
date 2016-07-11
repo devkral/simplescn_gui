@@ -22,7 +22,7 @@ if __name__ == "__main__":
     ownpath = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.dirname(ownpath))
 
-from simplescn_gui import scnparse_args, parsepath
+from simplescn_gui import scnparse_args, parsepath, parsebool
 
 
 guiclient_instance = None
@@ -40,6 +40,7 @@ def _init_scn():
 
 def _signal_handler(_signal, frame):
     """ handles signals; shutdown properly """
+    global guiclient_instance
     guiclient_instance.quit()
     logging.shutdown()
     sys.exit(0)
@@ -57,7 +58,10 @@ default_client_config = \
 {
     "backlog": [str(200), int, "length of backlog"],
     "config": [config.default_configdir, parsepath, "<path>: path to config dir"],
-    "loglevel": [str(config.default_loglevel), loglevel_converter, "<int/str>: loglevel"]
+    "loglevel": [str(config.default_loglevel), loglevel_converter, "<int/str>: loglevel"],
+    "remoteclient_url": ["", str, "<str>: url of remote client"],
+    "remoteclient_hash": ["", str, "<str>: hash of remote client"],
+    "useunix": ["False", parsebool, "<bool>: use unix socket"]
 }
 def client_gtk(argv=sys.argv[1:]):
     """ gtk gui """
@@ -68,7 +72,7 @@ def client_gtk(argv=sys.argv[1:]):
 
     #overwrite_client_args2 = argv
     #pluginpathes = [os.path.join(sharedir, "plugins")]
-    overkwargs = scnparse_args(argv, client_paramhelp, default_client_config)
+    overkwargs, new_argv = scnparse_args(argv, client_paramhelp, default_client_config)
     configpath = overkwargs["config"][1](overkwargs["config"][0])
     overkwargs["config"][0] = configpath
     #pluginpathes.insert(1, os.path.join(configpath, "plugins"))

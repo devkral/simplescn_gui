@@ -5,13 +5,14 @@ license: MIT, see LICENSE.txt
 
 import logging
 import os
-import locale
+#import locale
 
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib
 
-from simplescn_gui.guigtk import set_parent_template, activate_shielded, toggle_shielded, open_hashes
+from simplescn_gui.guigtk import set_parent_template, open_hashes
+#, activate_shielded, toggle_shielded
 from simplescn_gui import sharedir
 from simplescn.config import isself, security_states
 from simplescn.tools import logcheck
@@ -85,11 +86,12 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
             if infoob[0]:
                 self.info = infoob
         if not self.info:
-            infoob = self.do_requestdo("getlocal", hash=self.resdict.get("forcehash"))
+            _thash = self.resdict.get("forcehash")
+            infoob = self.do_requestdo("getlocal", hash=_thash)
             if not infoob[0]:
                 return
             name = (infoob[1]["name"], infoob[1]["security"])
-            self.info = (True, {"type": infoob[1]["type"], "message": "", "name": name[0]}, name, self.resdict.get("forcehash"))
+            self.info = (True, {"type": infoob[1]["type"], "message": "", "name": name[0]}, name, _thash)
 
     def init_info_slate(self, *args):
         sombie = self.get_object("securitycombo")
@@ -234,10 +236,10 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
 
         category = self.info[1]["type"]
         if category not in self.added_actions:
-            self.init_actions(category)
+            #self.init_actions(category)
             self.added_actions.add(category)
         if category == "server":
-            cat = "gui_server_iface"
+            #cat = "gui_server_iface"
             if self.get_address() is not None and "server" not in self.page_names:
                 _tmp = self.create_server_slate()
                 self.page_names["server"] = self.page_count
@@ -246,7 +248,7 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
                 noteb.append_page(_tmp, _tmplabel)
                 noteb.set_tab_detachable(_tmp, False)
         elif category == "client":
-            cat = "gui_node_iface"
+            #cat = "gui_node_iface"
             if self.get_address() is not None and "services" not in self.page_names:
                 _tmp = self.create_service_slate()
                 self.page_names["services"] = self.page_count
@@ -258,80 +260,80 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
             logging.warning("Category not exist")
 
         self.connect_signals(self)
-        for pname, plugin in sorted(self.links["client_server"].pluginmanager.plugins.items(), key=lambda x: x[0]):
-            if hasattr(plugin, cat) and plugin not in self.page_names:
-                try:
-                    if cat == "gui_server_iface":
-                        _tmp = getattr(plugin, cat)("gtk", self.info[2], self.info[3], self.get_address, self.win)
-                    else:
-                        _tmp = getattr(plugin, cat)("gtk", self.info[2], self.info[3], self.get_address, self.get_traverseaddr, self.win)
-                    if _tmp is not None:
-                        if getattr(plugin, "lname"): #  and getattr(plugin, "lname") is dict:
-                            llocale = locale.getlocale()[0]
-                            lname = plugin.lname.get(llocale)
-                            if lname is None:
-                                lname = plugin.lname.get(llocale.split("_", 1)[0])
-                            if lname is None:
-                                lname = plugin.lname.get("*", pname)
-                        else:
-                            lname = pname
-                        noteb.append_page(_tmp, Gtk.Label(lname, tooltip_text="{} ({})".format(lname, pname)))
-                        noteb.set_tab_detachable(_tmp, False)
-                        self.page_names[pname] = self.page_count
-                        self.page_count += 1
-                except Exception as exc:
-                    logging.error(exc)
+        #for pname, plugin in sorted(self.links["client_server"].pluginmanager.plugins.items(), key=lambda x: x[0]):
+        #    if hasattr(plugin, cat) and plugin not in self.page_names:
+        #        try:
+        #            if cat == "gui_server_iface":
+        #                _tmp = getattr(plugin, cat)("gtk", self.info[2], self.info[3], self.get_address, self.win)
+        #            else:
+        #                _tmp = getattr(plugin, cat)("gtk", self.info[2], self.info[3], self.get_address, self.get_traverseaddr, self.win)
+        #            if _tmp is not None:
+        #                if getattr(plugin, "lname"): #  and getattr(plugin, "lname") is dict:
+        #                    llocale = locale.getlocale()[0]
+        #                    lname = plugin.lname.get(llocale)
+        #                    if lname is None:
+        #                        lname = plugin.lname.get(llocale.split("_", 1)[0])
+        #                    if lname is None:
+        #                        lname = plugin.lname.get("*", pname)
+        #                else:
+        #                    lname = pname
+        #                noteb.append_page(_tmp, Gtk.Label(lname, tooltip_text="{} ({})".format(lname, pname)))
+        #                noteb.set_tab_detachable(_tmp, False)
+        #                self.page_names[pname] = self.page_count
+        #                self.page_count += 1
+        #        except Exception as exc:
+        #            logging.error(exc)
         self.connect_signals(self)
         noteb.show_all()
         # don't connect signals, should be done by plugins itself
-        #self.connect_signals(self)
-        self.address_change()
+        self.connect_signals(self)
+        #self.address_change()
         if isinstance(page, int):
             noteb.set_current_page(page)
         else:
             noteb.set_current_page(self.page_names.get(page, 0))
 
-    def init_actions(self, category):
-        menu = self.get_object("actions")
-        if category == "server":
-            cat = "gui_server_actions"
-        elif category == "client":
-            cat = "gui_node_actions"
-        else:
-            logging.warning("Category not exist")
-            cat = "gui_node_actions"
-        actionmenub = self.get_object("nodeactionbutton")
-        issensitiveset = False
-        actionmenub.set_sensitive(False)
-        for plugin in self.links["client_server"].pluginmanager.plugins.values():
-            if hasattr(plugin, cat):
-                try:
-                    for action in getattr(plugin, cat):
-                        if "action" not in action or "text" not in action or "gtk" not in action.get("interfaces", []):
-                            continue
-                        item = Gtk.MenuItem()
-                        itemb = Gtk.Grid(orientation=Gtk.Orientation.HORIZONTAL, column_spacing=3)
-                        item.add(itemb)
-                        if action.get("state") is not None:
-                            tb = Gtk.CheckButton(active=action.get("state"))
-                            itemb.attach_next_to(tb, None, Gtk.PositionType.RIGHT, 1, 1)
-                        if "icon" in action:
-                            itemb.attach_next_to(Gtk.Image.new_from_file(action["icon"]), None, Gtk.PositionType.RIGHT, 1, 1)
-                        itemb.attach_next_to(Gtk.Label(action["text"]), None, Gtk.PositionType.RIGHT, 1, 1)
-                        if "description" in action:
-                            itemb.set_tooltip_text(action["description"])
-                        itemb.show_all()
-                        item.show()
-                        if action.get("state") is not None:
-                            item.connect('activate', toggle_shielded(action["action"], tb, self.get_address, self.win, self.resdict))
-                        else:
-                            item.connect('activate', activate_shielded(action["action"], self.get_address, self.win, self.resdict))
-                        menu.append(item)
-                        if not issensitiveset:
-                            actionmenub.set_sensitive(True)
-                            issensitiveset = True
-                except Exception as exc:
-                    logging.error(exc)
+    #def init_actions(self, category):
+        #menu = self.get_object("actions")
+        #if category == "server":
+        #    cat = "gui_server_actions"
+        #elif category == "client":
+        #    cat = "gui_node_actions"
+        #else:
+        #    logging.warning("Category not exist")
+        #    cat = "gui_node_actions"
+        #actionmenub = self.get_object("nodeactionbutton")
+        #issensitiveset = False
+        #actionmenub.set_sensitive(False)
+        #for plugin in self.links["client_server"].pluginmanager.plugins.values():
+        #    if hasattr(plugin, cat):
+        #        try:
+        #            for action in getattr(plugin, cat):
+        #                if "action" not in action or "text" not in action or "gtk" not in action.get("interfaces", []):
+        #                    continue
+        #                item = Gtk.MenuItem()
+        #                itemb = Gtk.Grid(orientation=Gtk.Orientation.HORIZONTAL, column_spacing=3)
+        #                item.add(itemb)
+        #                if action.get("state") is not None:
+        #                    tb = Gtk.CheckButton(active=action.get("state"))
+        #                    itemb.attach_next_to(tb, None, Gtk.PositionType.RIGHT, 1, 1)
+        #                if "icon" in action:
+        #                    itemb.attach_next_to(Gtk.Image.new_from_file(action["icon"]), None, Gtk.PositionType.RIGHT, 1, 1)
+        #                itemb.attach_next_to(Gtk.Label(action["text"]), None, Gtk.PositionType.RIGHT, 1, 1)
+        #                if "description" in action:
+        #                    itemb.set_tooltip_text(action["description"])
+        #                itemb.show_all()
+        #                item.show()
+        #                if action.get("state") is not None:
+        #                    item.connect('activate', toggle_shielded(action["action"], tb, self.get_address, self.win, self.resdict))
+        #                else:
+        #                    item.connect('activate', activate_shielded(action["action"], self.get_address, self.win, self.resdict))
+        #                menu.append(item)
+        #                if not issensitiveset:
+        #                    actionmenub.set_sensitive(True)
+        #                    issensitiveset = True
+        #        except Exception as exc:
+        #            logging.error(exc)
 
 # update message
     def update_message(self, *args):

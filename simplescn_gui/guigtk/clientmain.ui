@@ -487,6 +487,7 @@
                   <object class="GtkFrame" id="frame1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="label_xalign">0</property>
                     <property name="shadow_type">in</property>
                     <child>
                       <object class="GtkGrid" id="grid6">
@@ -875,19 +876,6 @@
             <property name="column_spacing">3</property>
             <property name="column_homogeneous">True</property>
             <child>
-              <object class="GtkButton" id="okbuttonclient">
-                <property name="label" translatable="yes">Ok</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="client_confirm" swapped="no"/>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="top_attach">0</property>
-              </packing>
-            </child>
-            <child>
               <object class="GtkButton" id="cancelbuttonclient">
                 <property name="label" translatable="yes">Cancel</property>
                 <property name="visible">True</property>
@@ -901,15 +889,27 @@
               </packing>
             </child>
             <child>
-              <object class="GtkCheckButton" id="uselocal">
-                <property name="label" translatable="yes">use local</property>
+              <object class="GtkButton" id="okbuttonclient">
+                <property name="label" translatable="yes">Ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="client_confirm" swapped="no"/>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="useunix">
+                <property name="label" translatable="yes">use unix</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
                 <property name="halign">start</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
-                <signal name="toggled" handler="client_localtoggle" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">0</property>
@@ -926,7 +926,6 @@
         <child>
           <object class="GtkEntry" id="clienturl">
             <property name="visible">True</property>
-            <property name="sensitive">False</property>
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>
             <property name="input_hints">GTK_INPUT_HINT_NO_SPELLCHECK | GTK_INPUT_HINT_NONE</property>
@@ -939,7 +938,6 @@
         <child>
           <object class="GtkEntry" id="clienthash">
             <property name="visible">True</property>
-            <property name="sensitive">False</property>
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>
             <property name="input_hints">GTK_INPUT_HINT_NO_SPELLCHECK | GTK_INPUT_HINT_NONE</property>

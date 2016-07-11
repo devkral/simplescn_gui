@@ -25,11 +25,14 @@ def parsepath(inp):
         ret = ret.replace("/", "\\")
     return ret
 
+def parsebool(inp):
+    return inp.lower() in ["y", "true", "t"]
+
 # default_args, overwrite_args are modified
 def scnparse_args(arg_list, _funchelp, default_args):
     new_arglist = {}
-    for key, val in default_args.items():
-        new_arglist[key] = val
+    new_arglist["config"] = default_args["config"]
+    new_argv = []
     if len(arg_list) > 0:
         tparam = ()
         for elem in arg_list: #strip filename from arg list
@@ -59,4 +62,6 @@ def scnparse_args(arg_list, _funchelp, default_args):
                 if tparam[0] in default_args:
                     new_arglist[tparam[0]] = default_args[tparam[0]].copy()
                     new_arglist[tparam[0]][0] = tparam[1]
-    return new_arglist
+                else:
+                    new_argv.append(elem)
+    return new_arglist, new_argv
