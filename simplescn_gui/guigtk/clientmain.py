@@ -18,13 +18,13 @@ from simplescn import AddressError
 from simplescn.tools import generate_error
 from simplescn.scnrequest import requester
 
+import simplescn_gui
 from simplescn_gui.guigtk.clientmain_sub import cmd_stuff, debug_stuff, configuration_stuff, help_stuff
 from simplescn_gui.guigtk.clientmain_managehash import hashmanagement
 from simplescn_gui.guigtk.clientdialogs import gtkclient_pw, gtkclient_notify, parentlist
 from simplescn_gui.guigtk.clientnode import gtkclient_node
 from simplescn_gui.guigtk import set_parent_template, implementedrefs
 from simplescn_gui import sharedir
-from simplescn_gui import __main__
 
 from simplescn import AddressEmptyError
 #, AuthNeeded
@@ -170,6 +170,8 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         # use_localclient is True if client was set successfully
         # can force remote or local
         #resp = s(action, obdict)
+        #if not ret[0]:
+        #    logging.error(ret[1])
         return ret
 
     def update_storage(self):
@@ -301,18 +303,18 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
             _veri.set_text("")
             return None
 
-        _hash = self.do_requestdo("check_direct", address=serverurl)
+        _hash = self.do_requestdo("cap", address=serverurl)
         if not _hash[0]:
             _veri.set_text("")
             return None
 
-        if _hash[2][0] is None:
+        if _hash[2] is None:
             _veri.set_text("Unknown server")
-        elif _hash[2][0] is isself:
+        elif _hash[2] is isself:
             _veri.set_text("This client")
         else:
-            _veri.set_text("Verified as:\n{}\n ({})".format(_hash[2][0][0], _hash[2][0][1]))
-        return _hash[2]
+            _veri.set_text("Verified as:\n{}\n ({})".format(_hash[2][0], _hash[2][1]))
+        return _hash[2], _hash[3]
 
     def veristate_server(self, *args):
         """ use servercomboentry widget, call _verifyserver """
@@ -335,19 +337,19 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         cnode = self.builder.get_object("curnode")
         cnodeorigin = self.builder.get_object("nodeorigin")
         opennodeb = self.builder.get_object("opennodeb")
-        _ask = self.do_requestdo("check_direct", address=_clientaddress)
-        if not _ask[0]:
+        _ask = self.do_requestdo("cap", address=_clientaddress)
+        if not _ask[2]:
             cnodeorigin.set_text("")
             cnode.set_text("invalid")
             opennodeb.set_sensitive(False)
             self.curnode = None
-        elif _ask[2][0] is None:
+        elif _ask[2] is None:
             cnodeorigin.set_text("remote:")
             cnode.set_text(_name)
             opennodeb.show()
             opennodeb.set_sensitive(True)
             self.curnode = (None, _clientaddress, _name, _hash, _serveraddress)
-        elif _ask[2][0] is isself:
+        elif _ask[2] is isself:
             cnodeorigin.set_text("")
             cnode.set_text("This client")
             opennodeb.show()
@@ -504,11 +506,10 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         serverurl = self.builder.get_object("servercomboentry").get_text().strip(" ").rstrip(" ")
         serverurl = "{}-{}".format(*scnparse_url(serverurl))
         localview = self.builder.get_object("localview")
-        temp = self._verifyserver(serverurl)
-        if temp[0] is None:
+        _name, _hash = self._verifyserver(serverurl)
+        if _hash is None:
             logging.debug("Something failed")
             return
-        _hash = temp[1]
 
         _sel = localview.get_selection().get_selected()
         if _sel[1] is None:
@@ -518,7 +519,7 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
 
         self.managehashdia.hide()
         #serverurl.find("")
-        if temp.get("localname") is None:
+        if _name is None:
             self.addnodehash_intern(_name, _hash, "server", refstoadd=(("url", serverurl),))
         else:
             res = self.do_requestdo("addreference", hash=_hash, reference=serverurl, reftype="url")
@@ -864,12 +865,12 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         self.win.destroy()
         #gtkclient_instance.quit()
 
-def open_gtk_node(_address, forcehash=None, page=0, requester=""):
-    """ plugin: open a node window
-        forcehash: shall a certification hash be enforced
-        page: name or number of page
-        requester: requesting plugin """
-    __main__.guiclient_node(__main__.guiclient_node.links, _address, forcehash=forcehash, page=page)
+#def open_gtk_node(_address, forcehash=None, page=0, requester=""):
+#    """ plugin: open a node window
+#        forcehash: shall a certification hash be enforced
+#        page: name or number of page
+#        requester: requesting plugin """
+#    clientnode.guiclient_node(clientnode.guiclient_node.links, _address, forcehash=forcehash, page=page)
     
 def open_gtk_pwcall_plugin(msg, requester):
     """ plugin: open a password dialog
@@ -919,14 +920,14 @@ class gtkclient_init(object):
 
 # for open_gtk_node and debug?
 def _init_method_gtkclient(confm, pluginm):
-    __main__.guiclient_instance = gtkclient_init(confm, pluginm)
+    simplescn_gui.guiclient_instance = gtkclient_init(confm, pluginm)
     #running_instances.append(gtkclient_instance)
     if False:# not confm.getb("noplugins"):
         #pluginm.resources["access"] = __main__.guiclient_instance.links["client"].access_safe
         #pluginm.resources["plugin"] = __main__.guiclient_instance.links["client"].use_plugin
-        pluginm.resources["open_node"] = open_gtk_node
+        #pluginm.resources["open_node"] = open_gtk_node
         pluginm.resources["open_pwrequest"] = open_gtk_pwcall_plugin
         pluginm.resources["open_notify"] = open_gtk_notify_plugin
         pluginm.init_plugins()
-    __main__.guiclient_instance.enter_gtkmainloop()
+    simplescn_gui.guiclient_instance.enter_gtkmainloop()
     sys.exit(0)

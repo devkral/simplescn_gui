@@ -70,7 +70,7 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
         _address = self.get_address()
         if _address is not None:
             infoob = self.do_requestdo("info", address=_address)
-            if not infoob[0]:
+            if not infoob[0] and infoob[2] is not None:
                 travret = self.do_requestdo("getreferences", hash=self.resdict.get("forcehash"), filter="surl")
                 if not logcheck(travret, logging.ERROR):
                     logging.error("fetching references failed")
@@ -157,7 +157,8 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
         for name, _hash, _security, _localname in _names[1]["items"]:
             if _localname is None:
                 namestore.append(("remote", _security, name, _hash, name))
-            elif _localname is isself:
+            # isself is here a name not an instance so use ==
+            elif _localname == isself:
                 self.isregistered = True
                 namestore.append(("This Client", _security, name, _hash, name))
             else:

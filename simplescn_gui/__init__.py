@@ -14,7 +14,7 @@ own_help = """
   * help: help in markdown format
   * help-md, help-markdown: help in html format (parsed markdown)
 """
-
+guiclient_instance = None
 
 # for config
 def parsepath(inp):

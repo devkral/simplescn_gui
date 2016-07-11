@@ -22,10 +22,10 @@ if __name__ == "__main__":
     ownpath = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.dirname(ownpath))
 
+import simplescn_gui
 from simplescn_gui import scnparse_args, parsepath, parsebool
 
 
-guiclient_instance = None
 default_loglevel = "DEBUG"
 logformat = '%(levelname)s::%(filename)s:%(lineno)d::%(funcName)s::%(message)s'
 
@@ -40,8 +40,7 @@ def _init_scn():
 
 def _signal_handler(_signal, frame):
     """ handles signals; shutdown properly """
-    global guiclient_instance
-    guiclient_instance.quit()
+    simplescn_gui.guiclient_instance.quit()
     logging.shutdown()
     sys.exit(0)
 
