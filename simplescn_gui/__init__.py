@@ -31,7 +31,8 @@ def parsebool(inp):
 # default_args, overwrite_args are modified
 def scnparse_args(arg_list, _funchelp, default_args):
     new_arglist = {}
-    new_arglist["config"] = default_args["config"]
+    for key, val in default_args.items():
+        new_arglist[key] = val
     new_argv = []
     if len(arg_list) > 0:
         tparam = ()

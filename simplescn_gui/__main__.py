@@ -12,7 +12,7 @@ import threading
 import signal
 #import json
 
-from simplescn.tools import loglevel_converter
+from simplescn.tools import loglevel_converter, getlocalclient
 from simplescn import config
 
 confdb_ending = ".confdb"
@@ -53,14 +53,21 @@ def client(argv=sys.argv[1:]):
         logging.error(exc)
         return
 
+splitted = getlocalclient()
+if splitted:
+    _duseunix = str(splitted[1])
+    _daddr = splitted[0]
+else:
+    _duseunix = "False"
+    _daddr = ""
 default_client_config = \
 {
     "backlog": [str(200), int, "length of backlog"],
     "config": [config.default_configdir, parsepath, "<path>: path to config dir"],
     "loglevel": [str(config.default_loglevel), loglevel_converter, "<int/str>: loglevel"],
-    "remoteclient_url": ["", str, "<str>: url of remote client"],
+    "remoteclient_url": [_daddr, str, "<str>: url of remote client"],
     "remoteclient_hash": ["", str, "<str>: hash of remote client"],
-    "useunix": ["False", parsebool, "<bool>: use unix socket"]
+    "useunix": [_duseunix, parsebool, "<bool>: use unix socket"]
 }
 def client_gtk(argv=sys.argv[1:]):
     """ gtk gui """

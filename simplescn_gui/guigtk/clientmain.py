@@ -156,7 +156,7 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         #={}
         try:
             if overwriteaddress:
-                resp = self._requester.do_request(overwriteaddress, "/client/{}".format(action), obdict, {}, keepalive=False, ownhash=self.remoteclient_hash)
+                resp = self._requester.do_request(overwriteaddress, "/client/{}".format(action), obdict, {}, keepalive=False, ownhash=self.remoteclient_hash, use_unix=self.clientunix.get_active())
             else:
                 resp = self._requester.do_request(self.remoteclient_url, "/client/{}".format(action), obdict, {}, forcehash=self.remoteclient_hash, pwhandler=gtkclient_pw, keepalive=False, ownhash=self.remoteclient_hash, use_unix=self.clientunix.get_active())
             if resp[0] is not None:
@@ -506,21 +506,21 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         serverurl = self.builder.get_object("servercomboentry").get_text().strip(" ").rstrip(" ")
         serverurl = "{}-{}".format(*scnparse_url(serverurl))
         localview = self.builder.get_object("localview")
-        _name, _hash = self._verifyserver(serverurl)
+        _hname, _hash = self._verifyserver(serverurl)
         if _hash is None:
             logging.debug("Something failed")
             return
 
         _sel = localview.get_selection().get_selected()
         if _sel[1] is None:
-            _name = ""
+            _name = None
         else:
             _name = _sel[0][_sel[1]][0]
 
         self.managehashdia.hide()
         #serverurl.find("")
         if _name is None:
-            self.addnodehash_intern(_name, _hash, "server", refstoadd=(("url", serverurl),))
+            self.addnodehash_intern(_hname, _hash, "server", refstoadd=(("url", serverurl),))
         else:
             res = self.do_requestdo("addreference", hash=_hash, reference=serverurl, reftype="url")
             if not res[0]:

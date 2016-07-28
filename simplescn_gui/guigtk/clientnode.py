@@ -70,7 +70,7 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
         _address = self.get_address()
         if _address is not None:
             infoob = self.do_requestdo("info", address=_address)
-            if not infoob[0] and infoob[2] is not None:
+            if not logcheck(infoob, logging.ERROR) and infoob[2] is not None:
                 travret = self.do_requestdo("getreferences", hash=self.resdict.get("forcehash"), filter="surl")
                 if not logcheck(travret, logging.ERROR):
                     logging.error("fetching references failed")
@@ -195,7 +195,10 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
         if self.get_address() is None:
             return
         servicel = self.get_object("servicelist")
-        ret = self.do_requestdo("listservices", address=self.get_address())
+        if self.info[2] is isself:
+            ret = self.do_requestdo("listservices")
+        else:
+            ret = self.do_requestdo("listservices", client=self.get_address())
         servicel.clear()
         if not logcheck(ret, logging.INFO):
             return
