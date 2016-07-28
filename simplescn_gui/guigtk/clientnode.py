@@ -99,18 +99,20 @@ class _gtkclient_node(Gtk.Builder, set_parent_template):
         securtypes = security_states.copy()
         if self.info[2] is isself:
             self.get_object("securityshow").set_label("self/destruct keys")
+            self.get_object("securityshow").set_sensitive(True)
             self.get_object("destroykeysb").show()
             securtypes.remove("valid") #not valid
             secwhat.set_text("Destroy broken/old key with reason:")
         elif isinstance(self.info[2], tuple):
             self.get_object("securityshow").set_label(self.info[2][1])
+            self.get_object("securityshow").set_sensitive(True)
             self.get_object("confirmsecb").show()
             sombie.append_text(self.info[2][1])
             securtypes.remove(self.info[2][1])
             secwhat.set_text("Set key state:")
         else:
-            self.get_object("securityshow").set_label("invisible")
-            self.get_object("securityshow").hide()
+            self.get_object("securityshow").set_label("unknown")
+            self.get_object("securityshow").set_sensitive(False)
 
         for entry in securtypes:
             sombie.append_text(entry)

@@ -16,7 +16,7 @@ from gi.repository import Gtk, Gdk, GLib, Gio
 
 from simplescn import AddressError
 from simplescn.tools import generate_error
-from simplescn.scnrequest import requester
+from simplescn.scnrequest import Requester
 
 import simplescn_gui
 from simplescn_gui.guigtk.clientmain_sub import cmd_stuff, debug_stuff, configuration_stuff, help_stuff
@@ -68,7 +68,7 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         self.links = _links
         self.remoteclient_url = self.links["config"].get("remoteclient_url")
         self.remoteclient_hash = self.links["config"].get("remoteclient_hash")
-        self._requester = requester(pwhandler=gtkclient_pw)
+        self._requester = Requester(pwhandler=gtkclient_pw)
         #self.setFormatter(logging.Formatter('%(levelname)s::%(filename)s:%(lineno)d::%(funcName)s::%(message)s'))
         #self.app = Gtk.Application.new("apps.simplescn", Gio.ApplicationFlags.NON_UNIQUE)
         self.app = Gtk.Application.new(None, Gio.ApplicationFlags. FLAGS_NONE)
