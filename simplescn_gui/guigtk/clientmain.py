@@ -156,9 +156,14 @@ class gtkclient_main(logging.Handler, configuration_stuff, cmd_stuff, debug_stuf
         #={}
         try:
             if overwriteaddress:
-                resp = self._requester.do_request(overwriteaddress, "/client/{}".format(action), obdict, {}, keepalive=False, ownhash=self.remoteclient_hash, use_unix=self.clientunix.get_active())
+                resp = self._requester.do_request("/client/{}".format(action), obdict, {}, \
+                                                  keepalive=False, ownhash=self.remoteclient_hash, \
+                                                  addrcon=overwriteaddress, use_unix=self.clientunix.get_active())
             else:
-                resp = self._requester.do_request(self.remoteclient_url, "/client/{}".format(action), obdict, {}, forcehash=self.remoteclient_hash, pwhandler=gtkclient_pw, keepalive=False, ownhash=self.remoteclient_hash, use_unix=self.clientunix.get_active())
+                resp = self._requester.do_request("/client/{}".format(action), obdict, {}, \
+                                                  forcehash=self.remoteclient_hash, keepalive=False, \
+                                                  addrcon=self.remoteclient_url, \
+                                                  ownhash=self.remoteclient_hash, use_unix=self.clientunix.get_active())
             ret = resp[1], resp[2], resp[3][0], resp[3][1]
         except Exception as exc:
             if isinstance(exc, AddressError):
